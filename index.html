@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GreenLeaf Plant Store — Demo</title>
+
+  <!-- Redux from CDN -->
+  <script src="https://unpkg.com/redux@4.2.1/dist/redux.min.js"></script>
+
+  <style>
+    /* Basic reset & fonts */
+    :root {
+      --green: #2e7d32;
+      --accent: #4caf50;
+      --muted: #6b7280;
+      --card-bg: #ffffff;
+      --page-bg: #f4fff4;
+      --shadow: rgba(0,0,0,0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: var(--page-bg);
+      color: #111827;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      min-height: 100vh;
+    }
+
+    header.app-header {
+      background: linear-gradient(90deg, var(--green), #1b5e20);
+      color: white;
+      padding: 12px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .logo {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:700;
+      font-size:18px;
+    }
+    .nav-links { display:flex; gap:12px; align-items:center; }
+    .nav-links a { color:rgba(255,255,255,0.95); text-decoration:none; font-weight:600; }
+    .cart-button {
+      background: rgba(255,255,255,0.1);
+      padding:6px 10px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      cursor:pointer;
+    }
+    .cart-count {
+      background:white;
+      color:var(--green);
+      padding:2px 8px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:13px;
+    }
+
+    /* Container and layout */
+    .container {
+      max-width:1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+
+    /* Landing */
+    .landing {
+      display:flex;
+      gap: 24px;
+      align-items:center;
+      justify-content:space-between;
+      padding: 56px;
+      border-radius:12px;
+      background-image: linear-gradient(rgba(255,255,255,0.86), rgba(255,255,255,0.86)), url('https://images.unsplash.com/photo-1494949649100-ec2b76a240d6?auto=format&fit=crop&w=1400&q=60');
+      background-size: cover;
+      background-position: center;
+      color: #064e3b;
+    }
+
+    .landing .left { max-width: 60%; }
+    .company-name { font-size:40px; font-weight:800; margin:0 0 8px;}
+    .company-desc { margin:0 0 18px; color: #065f46; font-size:16px; line-height:1.4; }
+    .btn {
+      display:inline-block;
+      padding:10px 16px;
+      border-radius:8px;
+      background:var(--accent);
+      color:white;
+      font-weight:700;
+      border:none;
+      cursor:pointer;
+      text-decoration:none;
+    }
+
+    /* Product listing */
+    .products-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px,1fr));
+      gap:18px;
+      margin-top:20px;
+    }
+    .card {
+      background:var(--card-bg);
+      border-radius:12px;
+      padding:14px;
+      box-shadow: 0 6px 20px var(--shadow);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height: 320px;
+    }
+    .card img { width:100%; height:150px; object-fit:cover; border-radius:8px; }
+    .card h3 { margin:0; font-size:18px; }
+    .price { font-weight:700; color:var(--green); }
+    .card .meta { color: var(--muted); font-size:13px; }
+
+    .card .actions { margin-top:auto; display:flex; gap:8px; align-items:center; justify-content:space-between; }
+    .btn-outline {
+      padding:8px 12px;
+      border-radius:8px;
+      border:2px solid var(--green);
+      background:transparent;
+      color:var(--green);
+      font-weight:700;
+      cursor:pointer;
+    }
+    .disabled {
+      opacity:0.5;
+      pointer-events:none;
+    }
+
+    /* Category heading */
+    .category {
+      margin-top:28px;
+    }
+    .category h2 { margin:0 0 8px; color:#0f5132; }
+
+    /* Cart page */
+    .cart-table {
+      width:100%;
+      border-collapse:collapse;
+      margin-top:16px;
+    }
+    .cart-row {
+      display:flex;
+      gap:12px;
+      align-items:center;
+      padding:12px;
+      border-radius:10px;
+      background:white;
+      box-shadow: 0 6px 20px var(--shadow);
+      margin-bottom:12px;
+    }
+    .cart-thumb { width:80px; height:80px; border-radius:8px; object-fit:cover; }
+    .cart-info { flex:1; }
+    .qty-controls { display:flex; gap:6px; align-items:center; }
+    .icon-btn {
+      border:1px solid #e5e7eb;
+      background:white; padding:8px; border-radius:8px; cursor:pointer;
+    }
+
+    .summary {
+      background:white; padding:16px; border-radius:12px; box-shadow:0 6px 20px var(--shadow);
+    }
+    .summary-row { display:flex; justify-content:space-between; margin-bottom:8px; font-weight:600; }
+
+    /* Responsive */
+    @media (max-width:700px) {
+      .landing { padding:24px; flex-direction:column; gap:16px; }
+      .landing .left { max-width:100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header (shown in product & cart pages) -->
+  <header class="app-header" id="appHeader" style="display:none">
+    <div class="logo" onclick="navigateTo('#/')">
+      <span style="font-size:20px">🌿</span>
+      <div>
+        <div style="line-height:1">GreenLeaf</div>
+        <div style="font-size:11px; opacity:0.9">Plant store</div>
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <a href="#/products" onclick="navigateTo('#/products')">Products</a>
+      <a href="#/cart" onclick="navigateTo('#/cart')">Cart</a>
+      <div class="cart-button" onclick="navigateTo('#/cart')" title="Go to cart">
+        🛒 <span id="cartTotalText">Cart</span>
+        <span class="cart-count" id="cartCountHeader">0</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" id="appRoot">
+    <!-- SPA content will be rendered here -->
+  </main>
+
+  <script>
+  /*************************************************************************
+   * Data: six plants grouped into 3 categories
+   *************************************************************************/
+  const PLANTS = [
+    {
+      id: 'p1',
+      name: 'Aloe Vera',
+      price: 12.99,
+      category: 'Succulents',
+      img: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=60'
+    },
+    {
+      id: 'p2',
+      name: 'Haworthia',
+      price: 9.50,
+      category: 'Succulents',
+      img: 'https://images.unsplash.com/photo-1544551763-1b2ac1c377cc?auto=format&fit=crop&w=800&q=60'
+    },
+    {
+      id: 'p3',
+      name: 'Snake Plant',
+      price: 15.49,
+      category: 'Air Purifiers',
+      img: 'https://images.unsplash.com/photo-1587502536263-6b0b47a94d2d?auto=format&fit=crop&w=800&q=60'
+    },
+    {
+      id: 'p4',
+      name: 'Monstera Deliciosa',
+      price: 22.50,
+      category: 'Air Purifiers',
+      img: 'https://images.unsplash.com/photo-1622202228870-2ab6a3bcd299?auto=format&fit=crop&w=800&q=60'
+    },
+    {
+      id: 'p5',
+      name: 'Peace Lily',
+      price: 18.00,
+      category: 'Flowering',
+      img: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=800&q=60'
+    },
+    {
+      id: 'p6',
+      name: 'ZZ Plant',
+      price: 19.75,
+      category: 'Flowering',
+      img: 'https://images.unsplash.com/photo-1560184897-6b9a9de0a4cc?auto=format&fit=crop&w=800&q=60'
+    }
+  ];
+
+  /*************************************************************************
+   * Redux setup
+   *
+   * State shape:
+   *   {
+   *     cart: { [plantId]: { id, qty, item } },
+   *     disabled: { [plantId]: true/false } // whether Add to Cart is disabled
+   *   }
+   *************************************************************************/
+
+  // Action types
+  const ACTIONS = {
+    ADD_TO_CART: 'ADD_TO_CART',
+    INCREMENT_ITEM: 'INCREMENT_ITEM',
+    DECREMENT_ITEM: 'DECREMENT_ITEM',
+    DELETE_ITEM: 'DELETE_ITEM',
+    SET_DISABLED: 'SET_DISABLED',
+    LOAD_STATE: 'LOAD_STATE',
+    CLEAR_CART: 'CLEAR_CART'
+  };
+
+  // Action creators
+  function addToCartAction(plant) {
+    return { type: ACTIONS.ADD_TO_CART, payload: { plant } };
+  }
+  function incrementItemAction(plantId) {
+    return { type: ACTIONS.INCREMENT_ITEM, payload: { plantId } };
+  }
+  function decrementItemAction(plantId) {
+    return { type: ACTIONS.DECREMENT_ITEM, payload: { plantId } };
+  }
+  function deleteItemAction(plantId) {
+    return { type: ACTIONS.DELETE_ITEM, payload: { plantId } };
+  }
+  function setDisabledAction(plantId, value) {
+    return { type: ACTIONS.SET_DISABLED, payload: { plantId, value } };
+  }
+  function loadStateAction(state) {
+    return { type: ACTIONS.LOAD_STATE, payload: { state } };
+  }
+  function clearCartAction() {
+    return { type: ACTIONS.CLEAR_CART };
+  }
+
+  // Initial state
+  const initialState = {
+    cart: {},        // e.g. { p1: { id:'p1', qty:2, item: {...} } }
+    disabled: {}     // e.g. { p1: true }
+  };
+
+  // Reducer
+  function rootReducer(state = initialState, action) {
+    switch(action.type) {
+      case ACTIONS.LOAD_STATE:
+        return { ...state, ...action.payload.state || {} };
+
+      case ACTIONS.ADD_TO_CART: {
+        const plant = action.payload.plant;
+        const id = plant.id;
+        const existing = state.cart[id];
+        const newQty = (existing ? existing.qty : 0) + 1;
+        return {
+          ...state,
+          cart: {
+            ...state.cart,
+            [id]: { id, qty: newQty, item: plant }
+          },
+          disabled: {
+            ...state.disabled,
+            [id]: true
+          }
+        };
+      }
+
+      case ACTIONS.INCREMENT_ITEM: {
+        const id = action.payload.plantId;
+        const existing = state.cart[id];
+        if (!existing) return state;
+        return {
+          ...state,
+          cart: {
+            ...state.cart,
+            [id]: { ...existing, qty: existing.qty + 1 }
+          }
+        };
+      }
+
+      case ACTIONS.DECREMENT_ITEM: {
+        const id = action.payload.plantId;
+        const existing = state.cart[id];
+        if (!existing) return state;
+        const newQty = existing.qty - 1;
+        if (newQty <= 0) {
+          // removing entirely and enabling Add button
+          const newCart = { ...state.cart };
+          delete newCart[id];
+          return {
+            ...state,
+            cart: newCart,
+            disabled: { ...state.disabled, [id]: false }
+          };
+        } else {
+          return {
+            ...state,
+            cart: {
+              ...state.cart,
+              [id]: { ...existing, qty: newQty }
+            }
+          };
+        }
+      }
+
+      case ACTIONS.DELETE_ITEM: {
+        const id = action.payload.plantId;
+        const newCart = { ...state.cart };
+        delete newCart[id];
+        return {
+          ...state,
+          cart: newCart,
+          disabled: { ...state.disabled, [id]: false }
+        };
+      }
+
+      case ACTIONS.SET_DISABLED: {
+        const { plantId, value } = action.payload;
+        return {
+          ...state,
+          disabled: { ...state.disabled, [plantId]: value }
+        };
+      }
+
+      case ACTIONS.CLEAR_CART: {
+        // enable all add buttons
+        return { ...initialState };
+      }
+
+      default:
+        return state;
+    }
+  }
+
+  // Create store
+  const store = Redux.createStore(rootReducer);
+
+  // Persist to localStorage (basic)
+  function saveStateToLocalStorage() {
+    try {
+      const state = store.getState();
+      localStorage.setItem('greenleaf_state', JSON.stringify(state));
+    } catch (e) { console.warn('Could not save state', e); }
+  }
+  function loadStateFromLocalStorage() {
+    try {
+      const raw = localStorage.getItem('greenleaf_state');
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+
+  // Load persisted state if any
+  const persisted = loadStateFromLocalStorage();
+  if (persisted) store.dispatch(loadStateAction(persisted));
+
+  // Subscribe to updates to update header cart count and persist
+  store.subscribe(() => {
+    renderHeaderCartCount();
+    saveStateToLocalStorage();
+  });
+
+  /*************************************************************************
+   * Routing and UI rendering functions
+   *************************************************************************/
+  const ROOT = document.getElementById('appRoot');
+  const HEADER = document.getElementById('appHeader');
+
+  function navigateTo(hash) {
+    // simple helper to set location and render; used by header links too
+    location.hash = hash;
+    renderRoute();
+  }
+
+  // Render functions
+  function renderRoute() {
+    const hash = location.hash || '#/';
+    // show header only on products and cart
+    if (hash.startsWith('#/products') || hash.startsWith('#/cart')) {
+      HEADER.style.display = 'flex';
+    } else {
+      HEADER.style.display = 'none';
+    }
+
+    if (hash === '#/' || hash === '') {
+      renderLanding();
+    } else if (hash.startsWith('#/products')) {
+      renderProductListing();
+    } else if (hash.startsWith('#/cart')) {
+      renderCartPage();
+    } else {
+      renderLanding();
+    }
+  }
+
+  /* ---------- Header cart count ---------- */
+  function getTotalItemCount() {
+    const state = store.getState();
+    return Object.values(state.cart).reduce((acc, cur) => acc + Number(cur.qty), 0);
+  }
+  function renderHeaderCartCount() {
+    const cnt = getTotalItemCount();
+    document.getElementById('cartCountHeader').textContent = cnt;
+  }
+
+  /* ---------- Landing page ---------- */
+  function renderLanding() {
+    ROOT.innerHTML = `
+      <section class="landing" aria-label="Landing">
+        <div class="left">
+          <div class="company-name">GreenLeaf</div>
+          <p class="company-desc">
+            GreenLeaf is a small online plant shop bringing easy-care, premium houseplants to your home.
+            From succulents to air-purifying favorites, we choose plants that help you create a happier, healthier space.
+          </p>
+          <div>
+            <a class="btn" href="#/products" onclick="navigateTo('#/products')">Get Started →</a>
+          </div>
+        </div>
+        <div class="right" style="min-width:280px; text-align:center;">
+          <img src="https://images.unsplash.com/photo-1524594154904-5a2c6c44e2b2?auto=format&fit=crop&w=600&q=60" alt="Plants" style="width:220px;border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.12);" />
+        </div>
+      </section>
+    `;
+  }
+
+  /* ---------- Products listing ---------- */
+  function renderProductListing() {
+    // group plants by category
+    const groups = PLANTS.reduce((acc, p) => {
+      acc[p.category] = acc[p.category] || [];
+      acc[p.category].push(p);
+      return acc;
+    }, {});
+
+    let html = `<section>
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+        <h1 style="margin: 8px 0 0;">Shop Plants</h1>
+        <div style="color:var(--muted); font-weight:700;">Browse our curated selection</div>
+      </div>`;
+
+    // For each category
+    for (const [category, items] of Object.entries(groups)) {
+      html += `<div class="category"><h2>${category}</h2>`;
+      html += `<div class="products-grid">`;
+
+      items.forEach(plant => {
+        html += renderProductCard(plant);
+      });
+
+      html += `</div></div>`;
+    }
+
+    html += `</section>`;
+    ROOT.innerHTML = html;
+    // After rendering, attach event listeners for add buttons (they call global addToCart)
+    // But we also need to update disabled state based on store
+    updateAddButtonsState();
+  }
+
+  function renderProductCard(plant) {
+    const state = store.getState();
+    const disabled = state.disabled[plant.id];
+    const disabledClass = disabled ? 'disabled' : '';
+    const disabledAttr = disabled ? 'disabled' : '';
+    // Price formatted
+    const priceText = formatPrice(plant.price);
+    return `
+      <article class="card" id="card-${plant.id}">
+        <img src="${plant.img}" alt="${escapeHtml(plant.name)}" />
+        <div>
+          <h3>${escapeHtml(plant.name)}</h3>
+          <div class="meta">${escapeHtml(plant.category)}</div>
+          <div style="margin-top:8px" class="price">${priceText}</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn-outline" onclick="viewDetails('${plant.id}')">Details</button>
+          <button class="btn ${disabledClass}" id="add-${plant.id}" ${disabledAttr} onclick="handleAddToCart('${plant.id}')">
+            ${disabled ? 'Added' : 'Add to Cart'}
+          </button>
+        </div>
+      </article>
+    `;
+  }
+
+  /* ---------- Cart page ---------- */
+  function renderCartPage() {
+    const state = store.getState();
+    const cartItems = Object.values(state.cart);
+    const totalCount = cartItems.reduce((acc, it) => acc + Number(it.qty), 0);
+    const totalCost = cartItems.reduce((acc, it) => acc + (Number(it.qty) * Number(it.item.price)), 0.0);
+
+    let html = `<section>
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+        <h1 style="margin: 8px 0 0;">Your Cart</h1>
+        <div style="color:var(--muted); font-weight:700;">${totalCount} item(s)</div>
+      </div>
+
+      <div style="display:flex; gap:20px; margin-top:16px;">
+        <div style="flex:1;">
+    `;
+
+    if (cartItems.length === 0) {
+      html += `<div style="padding:20px; background:white; border-radius:10px; box-shadow:0 6px 20px var(--shadow);">Your cart is empty. <a href="#/products" onclick="navigateTo('#/products')">Continue shopping</a></div>`;
+    } else {
+      cartItems.forEach(ci => {
+        html += `
+          <div class="cart-row" id="cart-row-${ci.id}">
+            <img src="${ci.item.img}" alt="${escapeHtml(ci.item.name)}" class="cart-thumb" />
+            <div class="cart-info">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight:700">${escapeHtml(ci.item.name)}</div>
+                  <div style="color:var(--muted); margin-top:4px;">Unit price: <span class="price">${formatPrice(ci.item.price)}</span></div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:14px; color:var(--muted)">Subtotal</div>
+                  <div style="font-weight:800; margin-top:6px;">${formatPrice(ci.qty * Number(ci.item.price))}</div>
+                </div>
+              </div>
+
+              <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                <div class="qty-controls">
+                  <button class="icon-btn" onclick="handleDecrement('${ci.id}')">−</button>
+                  <div style="min-width:36px; text-align:center; font-weight:700;">${ci.qty}</div>
+                  <button class="icon-btn" onclick="handleIncrement('${ci.id}')">+</button>
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <button class="btn-outline" onclick="handleDelete('${ci.id}')">Delete</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    html += `</div>`; // left column
+
+    // Summary column
+    html += `<div style="width:320px;">
+      <div class="summary">
+        <div style="font-size:18px; font-weight:800; margin-bottom:8px;">Order Summary</div>
+        <div class="summary-row"><div>Items</div><div>${totalCount}</div></div>
+        <div class="summary-row"><div>Total</div><div>${formatPrice(totalCost)}</div></div>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="btn" onclick="handleCheckout()">Checkout</button>
+          <button class="btn-outline" onclick="navigateTo('#/products')">Continue Shopping</button>
+        </div>
+      </div>
+    </div>`;
+
+    html += `</div></section>`;
+    ROOT.innerHTML = html;
+  }
+
+  /*************************************************************************
+   * Event handlers & helpers
+   *************************************************************************/
+  function handleAddToCart(plantId) {
+    const plant = PLANTS.find(p => p.id === plantId);
+    if (!plant) return;
+    store.dispatch(addToCartAction(plant));
+    // button becomes disabled via store change; header updates via subscription
+    // re-render the product listing to reflect disabled state
+    renderProductListing();
+  }
+
+  function handleIncrement(plantId) {
+    store.dispatch(incrementItemAction(plantId));
+    renderCartPage();
+  }
+
+  function handleDecrement(plantId) {
+    store.dispatch(decrementItemAction(plantId));
+    renderCartPage();
+  }
+
+  function handleDelete(plantId) {
+    if (!confirm('Remove this item from the cart?')) return;
+    store.dispatch(deleteItemAction(plantId));
+    renderCartPage();
+  }
+
+  function handleCheckout() {
+    alert('Checkout: Coming Soon 🚧');
+  }
+
+  function viewDetails(plantId) {
+    const p = PLANTS.find(x => x.id === plantId);
+    if (!p) return;
+    alert(`${p.name}\n\nCategory: ${p.category}\nPrice: ${formatPrice(p.price)}\n\nShort description: A lovely houseplant to brighten your home.`);
+  }
+
+  // After rendering products, ensure Add buttons reflect store disabled state
+  function updateAddButtonsState() {
+    const state = store.getState();
+    PLANTS.forEach(p => {
+      const btn = document.getElementById('add-' + p.id);
+      if (!btn) return;
+      if (state.disabled[p.id]) {
+        btn.classList.add('disabled');
+        btn.textContent = 'Added';
+        btn.disabled = true;
+      } else {
+        btn.classList.remove('disabled');
+        btn.textContent = 'Add to Cart';
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // Utility: format price to 2 decimal places with $ sign
+  function formatPrice(num) {
+    // digit-by-digit calculation avoided; use built-in toFixed safely after converting to Number
+    const n = Number(num) || 0;
+    return '$' + n.toFixed(2);
+  }
+
+  // Escape simple HTML in name strings
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function(m) {
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
+    });
+  }
+
+  /*
+   * Bind store changes for pages that need live updates:
+   * - header cart count is already subscribed
+   * - if on product page, update add buttons when state changes
+   * - if on cart page, re-render cart page when state changes
+   */
+  store.subscribe(() => {
+    const hash = location.hash || '#/';
+    if (hash.startsWith('#/products')) {
+      updateAddButtonsState();
+    } else if (hash.startsWith('#/cart')) {
+      renderCartPage();
+    }
+  });
+
+  // initial render
+  renderRoute();
+  renderHeaderCartCount();
+
+  // Listen to hash changes
+  window.addEventListener('hashchange', renderRoute);
+
+  // Expose some handlers for inline onclick in generated markup
+  window.handleAddToCart = handleAddToCart;
+  window.handleIncrement = handleIncrement;
+  window.handleDecrement = handleDecrement;
+  window.handleDelete = handleDelete;
+  window.handleCheckout = handleCheckout;
+  window.navigateTo = navigateTo;
+  window.viewDetails = viewDetails;
+  </script>
+</body>
+</html>
